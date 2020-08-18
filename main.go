@@ -1,16 +1,32 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"os"
+	"regexp"
 	"spatula/downloader"
 )
 
+var (
+	link      = flag.String("l", "", "the share link, must not be empty")
+	useragent = flag.String("u", "", "customized useragent")
+	path      = flag.String("p", "", "output path")
+	filename  = flag.String("o", "", "out put filename")
+)
+
 func main() {
-	link := os.Args[len(os.Args)-1]
-	links := downloader.Resolve(link)
+	flag.Parse()
+	reg := regexp.MustCompile(`(链接)?([:, ：]?)( *)(https://pan\.baidu\.com)?/?s?/?(?P<hash>[\S]*)( *)(提取码)?([:, ：]?)( *)(?P<code>[\S]{4})( *)(复制这段内容后打开百度网盘手机App，操作更方便哦)?`)
+	matches := reg.FindStringSubmatch(*link)
+	hash := matches[5]
+	code := matches[10]
+	*link = fmt.Sprintf("链接: https://pan.baidu.com/s/%v 提取码: %v", hash, code)
+	links := downloader.Resolve(*link)
 	index := 0
+	if len(links) < 1 {
+		fmt.Println("resolve failed, no file found (Note that folders are not supported) ")
+	}
 	if len(links) > 1 {
 		fmt.Println("Multiple files detected, pls select(folders are not supported): ")
 		for i, o := range links {
@@ -27,7 +43,7 @@ func main() {
 	if index > len(links) {
 		panic("index out of range")
 	}
-	link = links[index].Link
+	*link = links[index].Link
 	println("If being limited, value 10240 is suggested")
 	print("Please input file block size[default: 4194304]: ")
 	var blockSize int64
@@ -42,5 +58,6 @@ func main() {
 	if err != nil {
 		maxGoRoutines = 20
 	}
-	downloader.Download(link, blockSize, maxGoRoutines, "", "")
+	t := downloader.NewTask(*link, *path, *filename, *useragent)
+	t.Download(blockSize, maxGoRoutines)
 }

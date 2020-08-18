@@ -1,14 +1,20 @@
 # spatula
 works with pan
 ## usage
-### windows
+### parameters
+-l the share link, must not be empty    
+-o output file name, will acquire from link if not provided    
+-p out put path, if not provided, the default path is the location where the binary is located    
+-u custom useragent, default value is empty. Use this parameter at your own risk. 
+### examples
+#### windows
 ```shell script
-.\stapula.exe "链接： https://pan.baidu.com/s/xxxxxxxxxx 提取码：xxxx"
+.\stapula.exe -l "链接： https://pan.baidu.com/s/xxxxxxxxxx 提取码：xxxx"
 ```
-### linux
-not tested
+#### linux
+not well tested
 ```shell script
-./stapula "链接： https://pan.baidu.com/s/xxxxxxxxxx 提取码：xxxx"
+./stapula -l "链接： https://pan.baidu.com/s/xxxxxxxxxx 提取码：xxxx"
 ```
 ## common questions
 Q: Why I can't change the location where the file is downloaded?  

@@ -19,9 +19,12 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="50d3b2a7-dcd2-4ed3-ab39-931912a73913" name="Default Changelist" comment="Initial commit">
+    <list default="true" id="50d3b2a7-dcd2-4ed3-ab39-931912a73913" name="Default Changelist" comment="refactor code into a more objective way&#10;downloaded files can have custom path and filename&#10;add file existence check&#10;user can now customize useragent&#10;link can now accept a wider format">
+      <changelist_data name="young-zy" email="youngzhaozhou@gmail.com" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/downloader/download.go" beforeDir="false" afterPath="$PROJECT_DIR$/downloader/download.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,13 +34,18 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Go File" />
         <option value="Go Application" />
+        <option value="Go File" />
       </list>
     </option>
   </component>
   <component name="GOROOT" path="C:\Users\youngzy\sdk\go1.15" />
   <component name="Git.Settings">
+    <option name="PREVIOUS_COMMIT_AUTHORS">
+      <list>
+        <option value="young-zy &lt;youngzhaozhou@gmail.com&gt;" />
+      </list>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GoLibraries">
@@ -53,7 +61,7 @@
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
-    <property name="DefaultGoTemplateProperty" value="Go Application" />
+    <property name="DefaultGoTemplateProperty" value="Go File" />
     <property name="GO_FMT" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
@@ -69,7 +77,7 @@
       <recent name="D:\Go\downloader\downloader" />
     </key>
   </component>
-  <component name="RunManager" selected="Go Test.TestDownload in spatula/downloader (2)">
+  <component name="RunManager" selected="Go Build.go build spatula">
     <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <module name="spatula" />
       <working_directory value="$PROJECT_DIR$" />
@@ -77,6 +85,16 @@
       <kind value="FILE" />
       <filePath value="$PROJECT_DIR$" />
       <package value="downloader" />
+      <directory value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go build spatula" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="spatula" />
+      <working_directory value="$PROJECT_DIR$" />
+      <parameters value="-l &quot;链接:https://pan.baidu.com/s/1uXCkbC8pIZ_12VlK3NMCBg 提取码:rhzf &quot; -p D:\BaiduNetdiscDownload\" />
+      <kind value="PACKAGE" />
+      <filePath value="$PROJECT_DIR$/main.go" />
+      <package value="spatula" />
       <directory value="$PROJECT_DIR$" />
       <method v="2" />
     </configuration>
@@ -124,28 +142,6 @@
       <pattern value="^\QTestDownloader\E$" />
       <method v="2" />
     </configuration>
-    <configuration name="TestDownloader in spatula/downloader" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
-      <module name="spatula" />
-      <working_directory value="$PROJECT_DIR$/downloader" />
-      <framework value="gotest" />
-      <kind value="PACKAGE" />
-      <package value="spatula/downloader" />
-      <directory value="$PROJECT_DIR$" />
-      <filePath value="$PROJECT_DIR$" />
-      <pattern value="^\QTestDownloader\E$" />
-      <method v="2" />
-    </configuration>
-    <configuration name="TestResolve in downloader/downloader (2)" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
-      <module name="spatula" />
-      <working_directory value="$PROJECT_DIR$/downloader" />
-      <framework value="gotest" />
-      <kind value="PACKAGE" />
-      <package value="downloader/downloader" />
-      <directory value="$PROJECT_DIR$" />
-      <filePath value="$PROJECT_DIR$" />
-      <pattern value="^\QTestResolve\E$" />
-      <method v="2" />
-    </configuration>
     <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
       <module name="spatula" />
       <working_directory value="$PROJECT_DIR$" />
@@ -158,8 +154,7 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Go Test.TestResolve in downloader/downloader (2)" />
-      <item itemvalue="Go Test.TestDownloader in spatula/downloader" />
+      <item itemvalue="Go Build.go build spatula" />
       <item itemvalue="Go Test.TestDownload in spatula/downloader" />
       <item itemvalue="Go Test.TestDownloader in spatula/downloader (1)" />
       <item itemvalue="Go Test.TestDownload in spatula/downloader (1)" />
@@ -167,11 +162,11 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Go Build.go build spatula" />
         <item itemvalue="Go Test.TestDownload in spatula/downloader (2)" />
         <item itemvalue="Go Test.TestDownload in spatula/downloader (1)" />
         <item itemvalue="Go Test.TestDownloader in spatula/downloader (1)" />
         <item itemvalue="Go Test.TestDownload in spatula/downloader" />
-        <item itemvalue="Go Test.TestDownloader in spatula/downloader" />
       </list>
     </recent_temporary>
   </component>
@@ -189,19 +184,26 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
     <MESSAGE value="Initial commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="Initial commit" />
+    <MESSAGE value="update readme" />
+    <MESSAGE value="refactor code into a more objective way&#10;downloaded files can have custom path and filename&#10;add file existence check&#10;user can now customize useragent&#10;link can now accept a wider format" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor code into a more objective way&#10;downloaded files can have custom path and filename&#10;add file existence check&#10;user can now customize useragent&#10;link can now accept a wider format" />
+    <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
+    <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
+    <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
   </component>
   <component name="VgoProject">
     <integration-enabled>true</integration-enabled>
   </component>
   <component name="WindowStateProjectService">
-    <state x="414" y="175" width="1092" height="825" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1597543782598">
+    <state x="414" y="175" width="1092" height="825" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1597688768708">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="414" y="175" width="1092" height="825" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597543782598" />
+    <state x="414" y="175" width="1092" height="825" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688768708" />
     <state x="715" y="310" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1597543611137">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -218,50 +220,50 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="837" y="139" width="407" height="761" key="Github.UntrackedFilesDialog/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597544806662" />
-    <state width="1877" height="241" key="GridCell.Tab.0.bottom" timestamp="1597545270623">
+    <state width="1877" height="340" key="GridCell.Tab.0.bottom" timestamp="1597688747606">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="241" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597545270623" />
-    <state width="1877" height="241" key="GridCell.Tab.0.center" timestamp="1597545270622">
+    <state width="1877" height="340" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688747606" />
+    <state width="1877" height="340" key="GridCell.Tab.0.center" timestamp="1597688747606">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="241" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597545270622" />
-    <state width="1877" height="241" key="GridCell.Tab.0.left" timestamp="1597545270622">
+    <state width="1877" height="340" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688747606" />
+    <state width="1877" height="340" key="GridCell.Tab.0.left" timestamp="1597688747605">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="241" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597545270622" />
-    <state width="1877" height="241" key="GridCell.Tab.0.right" timestamp="1597545270623">
+    <state width="1877" height="340" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688747605" />
+    <state width="1877" height="340" key="GridCell.Tab.0.right" timestamp="1597688747606">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="241" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597545270623" />
-    <state width="1877" height="340" key="GridCell.Tab.1.bottom" timestamp="1597543380301">
+    <state width="1877" height="340" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688747606" />
+    <state width="1877" height="340" key="GridCell.Tab.1.bottom" timestamp="1597688747606">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="340" key="GridCell.Tab.1.bottom/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597543380301" />
-    <state width="1877" height="340" key="GridCell.Tab.1.center" timestamp="1597543380301">
+    <state width="1877" height="340" key="GridCell.Tab.1.bottom/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688747606" />
+    <state width="1877" height="340" key="GridCell.Tab.1.center" timestamp="1597688747606">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="340" key="GridCell.Tab.1.center/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597543380301" />
-    <state width="1877" height="340" key="GridCell.Tab.1.left" timestamp="1597543380301">
+    <state width="1877" height="340" key="GridCell.Tab.1.center/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688747606" />
+    <state width="1877" height="340" key="GridCell.Tab.1.left" timestamp="1597688747606">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="340" key="GridCell.Tab.1.left/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597543380301" />
-    <state width="1877" height="340" key="GridCell.Tab.1.right" timestamp="1597543380301">
+    <state width="1877" height="340" key="GridCell.Tab.1.left/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688747606" />
+    <state width="1877" height="340" key="GridCell.Tab.1.right" timestamp="1597688747606">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="340" key="GridCell.Tab.1.right/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597543380301" />
+    <state width="1877" height="340" key="GridCell.Tab.1.right/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597688747606" />
     <state x="461" y="165" key="SettingsEditor" timestamp="1597547570692">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="461" y="165" key="SettingsEditor/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597547570692" />
-    <state x="552" y="249" key="Vcs.Push.Dialog.v2" timestamp="1597544903332">
+    <state x="552" y="249" key="Vcs.Push.Dialog.v2" timestamp="1597763478271">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="552" y="249" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597544903332" />
-    <state width="1681" height="528" key="XDebugger.FullValuePopup" timestamp="1597539314226">
+    <state x="552" y="249" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597763478271" />
+    <state width="1681" height="528" key="XDebugger.FullValuePopup" timestamp="1597606042524">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1681" height="528" key="XDebugger.FullValuePopup/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597539314226" />
+    <state width="1681" height="528" key="XDebugger.FullValuePopup/0.0.1920.1040/-1920.0.1920.1040@0.0.1920.1040" timestamp="1597606042524" />
     <state x="511" y="167" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2" timestamp="1597523347710">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -276,34 +278,34 @@
       <breakpoints>
         <line-breakpoint type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/downloader/download.go</url>
-          <line>135</line>
+          <line>139</line>
           <option name="timeStamp" value="6" />
         </line-breakpoint>
         <line-breakpoint type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/downloader/download.go</url>
-          <line>164</line>
+          <line>170</line>
           <option name="timeStamp" value="13" />
         </line-breakpoint>
         <line-breakpoint type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/downloader/download.go</url>
-          <line>169</line>
+          <line>175</line>
           <option name="timeStamp" value="14" />
         </line-breakpoint>
         <line-breakpoint type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/downloader/download.go</url>
-          <line>175</line>
+          <line>181</line>
           <option name="timeStamp" value="15" />
         </line-breakpoint>
         <line-breakpoint type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/downloader/download.go</url>
-          <line>129</line>
+          <line>133</line>
           <option name="timeStamp" value="17" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
     <watches-manager>
       <configuration name="GoApplicationRunConfiguration">
-        <watch expression="reg.FindStringSubmatch(d.Link)[1]" language="go" />
+        <watch expression="link" language="go" />
       </configuration>
       <configuration name="GoTestRunConfiguration">
         <watch expression="cookies" language="go" />

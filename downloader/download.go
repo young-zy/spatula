@@ -12,41 +12,61 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
+	"time"
 	"unsafe"
 )
 
 var (
-	wg sync.WaitGroup
-	cookies []*http.Cookie
+	wg     sync.WaitGroup
 	client *http.Client
 )
 
 type panShare struct {
 	Code string `json:"code"`
-	Data data   `json:"datas"`
+	Data *data  `json:"datas"`
 }
 
-type data struct{
-	Downlink []downlink `json:"downlink"`
+type data struct {
+	Downlink []*downlink `json:"downlink"`
 }
 
 type downlink struct {
-	Link string 	`json:"link"`
-	Name string		`json:"name"`
-	Size string		`json:"size"`
-	Time string		`json:"time"`
+	Link string `json:"link"`
+	Name string `json:"name"`
+	Size string `json:"size"`
+	Time string `json:"time"`
 }
 
-func init(){
+type task struct {
+	url          string
+	path         string
+	filename     string
+	tempFilename string
+	cookies      []*http.Cookie
+	size         int64
+	useragent    string
+}
+
+func init() {
 	client = &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConns: 2000,
+			MaxIdleConns:        2000,
 			MaxIdleConnsPerHost: 2000,
 		},
+		Timeout: 30 * time.Second,
 	}
 }
 
-func Resolve(link string) []downlink {
+func NewTask(url string, path string, filename string, userAgent string) *task {
+	return &task{
+		url:       url,
+		path:      path,
+		filename:  filename,
+		useragent: userAgent,
+	}
+}
+
+func Resolve(link string) []*downlink {
 	resp, err := http.Get("https://pan.naifei.cc/new/")
 	if err != nil || resp.StatusCode != 200 {
 		log.Println(err)
@@ -64,7 +84,7 @@ func Resolve(link string) []downlink {
 	resp, err = http.PostForm(
 		"https://pan.naifei.cc/new/panshare.php",
 		url.Values{"sign": {sign}, "link": {link}},
-		)
+	)
 	if err != nil || resp.StatusCode != 200 {
 		log.Println(err)
 		panic("resolver error")
@@ -74,65 +94,49 @@ func Resolve(link string) []downlink {
 		log.Println(err)
 		panic("failed to resolve result from resolver")
 	}
-	body = *(*string)(unsafe.Pointer(&bodyBytes))
 	var p panShare
 	err = json.Unmarshal(bodyBytes, &p)
 	if err != nil || p.Code != "200" {
 		panic("failed to retrieve direct link")
 	}
 	reg = regexp.MustCompile("href=\"(?P<link>[\\S]*)\">")
-	for i, d := range p.Data.Downlink {
-		p.Data.Downlink[i].Link = reg.FindStringSubmatch(d.Link)[1]
+	for _, d := range p.Data.Downlink {
+		d.Link = reg.FindStringSubmatch(d.Link)[1]
 	}
 	return p.Data.Downlink
 }
 
-func Download(url string, blockSize int64, maxGoroutines int, path string, userFilename string)  {
-	url, err := handle302(url)
+func (t *task) Download(blockSize int64, maxGoroutines int) {
+	err := t.handle302()
 	if err != nil {
-		println(err)
+		panic(err)
 	}
 	wait := make(chan struct{}, maxGoroutines)
-	for i:=0; i < maxGoroutines; i++ {
+	for i := 0; i < maxGoroutines; i++ {
 		wait <- struct{}{}
 	}
-	size, filename := getSizeAndName(url)
-	if userFilename != ""{
-		filename = userFilename
-	}
-	filename += ".tmp"
-	fp, err := os.OpenFile(path+filename, os.O_RDWR|os.O_CREATE, 0100644)
-	if err != nil {
-		fmt.Println(err)
-	}
-	_, err = fp.Seek(size, 0)
-	if err != nil {
-		fmt.Println(err)
-	}
-	_, err = fp.Write([]byte{0})
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = fp.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
-	for i := int64(0); i<=size; i+=blockSize {
+	t.getSizeAndName()
+	t.tempFilename = t.filename + ".tmp"
+	t.createTempFile()
+	for i := int64(0); i <= t.size; i += blockSize {
 		offset := i
 		wg.Add(1)
-		<- wait
+		<-wait
 		go func() {
 			count := 0
-			for count < 20{
-				err := downloadBlock(url, offset, blockSize, path, filename)
-				if err != nil{
+			for count < 20 {
+				if t.size-offset < blockSize {
+					blockSize = t.size - offset
+				}
+				err := t.downloadBlock(offset, blockSize)
+				if err != nil {
 					fmt.Println(err)
 					count++
-				}else{
+				} else {
 					break
 				}
 			}
-			if count >= 20{
+			if count >= 20 {
 				panic(fmt.Sprintf("error while downloading %v-%v", offset, offset+blockSize))
 			}
 			wg.Done()
@@ -140,22 +144,24 @@ func Download(url string, blockSize int64, maxGoroutines int, path string, userF
 		}()
 	}
 	wg.Wait()
-	filename = filename[:len(filename)-4]
-	err = os.Rename(path+filename+".tmp", path+filename)
+	err = os.Rename(t.path+t.tempFilename, t.path+t.filename)
 	if err != nil {
 		log.Println(err)
 		panic("failed to rename file after completion")
 	}
 }
 
-func downloadBlock(url string, offset int64, size int64, path string, filename string) error{
-	req, err := http.NewRequest("GET", url, nil)
+func (t *task) downloadBlock(offset int64, size int64) error {
+	req, err := http.NewRequest("GET", t.url, nil)
 	if err != nil {
 		return err
 	}
 	downloadRange := fmt.Sprintf("bytes=%v-%v", offset, offset+size)
 	req.Header.Add("Range", downloadRange)
-	for _, c := range cookies {
+	if t.useragent != "" {
+		req.Header.Set("User-Agent", t.useragent)
+	}
+	for _, c := range t.cookies {
 		if c.Name == "BAIDUID" {
 			req.AddCookie(c)
 		}
@@ -165,7 +171,7 @@ func downloadBlock(url string, offset int64, size int64, path string, filename s
 		return err
 	}
 	reader := bufio.NewReader(resp.Body)
-	fp, err := os.OpenFile(path+filename, os.O_RDWR|os.O_CREATE, 0100644)
+	fp, err := os.OpenFile(t.path+t.tempFilename, os.O_RDWR, 0100644)
 	if err != nil {
 		return err
 	}
@@ -179,28 +185,53 @@ func downloadBlock(url string, offset int64, size int64, path string, filename s
 	return nil
 }
 
-func handle302(url string) (location string,err error) {
+func (t *task) handle302() error {
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
-	resp, err := client.Get(url)
+	resp, err := client.Get(t.url)
 	if err != nil {
-		return "", err
+		return err
 	}
-	if resp.StatusCode == 302{
-		location = resp.Header.Get("Location")
-		cookies = resp.Cookies()
-	} else {
-		location = url
+	if resp.StatusCode == 302 {
+		t.url = resp.Header.Get("Location")
+		t.cookies = resp.Cookies()
 	}
-	return location, err
+	return nil
 }
 
-func getSizeAndName(url string) (int64, string){
+func (t *task) createTempFile() {
+	_, err := os.Stat(t.path + t.filename) //check file exists
+	if err == nil || os.IsExist(err) {
+		panic("file already exists")
+	}
+	_, err = os.Stat(t.path + t.tempFilename) //check file exists
+	if err == nil || os.IsExist(err) {
+		panic("temp file already exists")
+	}
+	fp, err := os.OpenFile(t.path+t.tempFilename, os.O_RDWR|os.O_CREATE, 0100644)
+	if err != nil {
+		fmt.Println(err)
+		panic("failed to open file")
+	}
+	defer fp.Close()
+	_, err = fp.Seek(t.size, 0)
+	if err != nil {
+		fmt.Println(err)
+		panic("failed to move to file pointer to file end")
+	}
+	_, err = fp.Write([]byte{0})
+	if err != nil {
+		fmt.Println(err)
+		panic("failed to write zero to file end")
+	}
+}
+
+func (t *task) getSizeAndName() {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", t.url, nil)
 	if err != nil {
 		panic("error while getting size")
 	}
@@ -217,5 +248,8 @@ func getSizeAndName(url string) (int64, string){
 	}
 	reg := regexp.MustCompile("attachment;filename=\"(?P<filename>[\\S, ]*)\"")
 	filename := reg.FindStringSubmatch(resp.Header.Get("Content-Disposition"))[1]
-	return size, filename
+	if t.filename == "" {
+		t.filename = filename
+	}
+	t.size = size
 }
