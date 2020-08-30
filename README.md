@@ -5,16 +5,19 @@ works with pan
 -l the share link, must not be empty    
 -o output file name, will acquire from link if not provided    
 -p out put path, if not provided, the default path is the location where the binary is located    
--u custom useragent, default value is empty. Use this parameter at your own risk. 
+-u custom useragent, default value is empty. Use this parameter at your own risk.     
+-c size of each file block(in Bytes), default value is 4194304(4 MB),if download speed is limited, set a value below the limit.    
+-g max goroutines opened, default value is 20, value over 1000 is not recommended
+
 ### examples
 #### windows
 ```shell script
-.\stapula.exe -l "链接： https://pan.baidu.com/s/xxxxxxxxxx 提取码：xxxx"
+.\stapula.exe -l https://oxygenos.oneplus.net/OnePlus6Oxygen_22_OTA_047_all_2007191515_bd6f7476887846cb.zip -c 4194304 -g 20
 ```
 #### linux
 not well tested
 ```shell script
-./stapula -l "链接： https://pan.baidu.com/s/xxxxxxxxxx 提取码：xxxx"
+./stapula -l https://oxygenos.oneplus.net/OnePlus6Oxygen_22_OTA_047_all_2007191515_bd6f7476887846cb.zip
 ```
 ## common questions
 Q: Why I can't change the location where the file is downloaded?  
