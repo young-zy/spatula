@@ -2,40 +2,20 @@ package downloader
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 var (
 	wg     sync.WaitGroup
 	client *http.Client
 )
-
-type panShare struct {
-	Code string `json:"code"`
-	Data *data  `json:"datas"`
-}
-
-type data struct {
-	Downlink []*downlink `json:"downlink"`
-}
-
-type downlink struct {
-	Link string `json:"link"`
-	Name string `json:"name"`
-	Size string `json:"size"`
-	Time string `json:"time"`
-}
 
 type task struct {
 	url          string
@@ -64,46 +44,6 @@ func NewTask(url string, path string, filename string, userAgent string) *task {
 		filename:  filename,
 		useragent: userAgent,
 	}
-}
-
-func Resolve(link string) []*downlink {
-	resp, err := http.Get("https://pan.naifei.cc/new/")
-	if err != nil || resp.StatusCode != 200 {
-		log.Println(err)
-		panic("failed to connect to resolver")
-	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-		panic("failed to retrieve sign from resolver")
-	}
-	body := *(*string)(unsafe.Pointer(&bodyBytes))
-	//body := string(bodyBytes)
-	reg := regexp.MustCompile("articleFrom\\['sign'] = \"(?P<sign>[\\S]*)\"")
-	sign := reg.FindStringSubmatch(body)[1]
-	resp, err = http.PostForm(
-		"https://pan.naifei.cc/new/panshare.php",
-		url.Values{"sign": {sign}, "link": {link}},
-	)
-	if err != nil || resp.StatusCode != 200 {
-		log.Println(err)
-		panic("resolver error")
-	}
-	bodyBytes, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-		panic("failed to resolve result from resolver")
-	}
-	var p panShare
-	err = json.Unmarshal(bodyBytes, &p)
-	if err != nil || p.Code != "200" {
-		panic("failed to retrieve direct link")
-	}
-	reg = regexp.MustCompile("href=\"(?P<link>[\\S]*)\">")
-	for _, d := range p.Data.Downlink {
-		d.Link = reg.FindStringSubmatch(d.Link)[1]
-	}
-	return p.Data.Downlink
 }
 
 func (t *task) Download(blockSize int64, maxGoroutines int) {
@@ -191,13 +131,18 @@ func (t *task) handle302() error {
 			return http.ErrUseLastResponse
 		},
 	}
-	resp, err := client.Get(t.url)
-	if err != nil {
+	resp, err := client.Head(t.url)
+	if err != nil || resp == nil {
 		return err
 	}
-	if resp.StatusCode == 302 {
+	for counter := 0; resp.StatusCode == 302; {
+		if counter > 30 {
+			panic("too many redirections")
+		}
+		counter++
 		t.url = resp.Header.Get("Location")
 		t.cookies = resp.Cookies()
+		resp, err = client.Head(t.url)
 	}
 	return nil
 }
@@ -236,20 +181,35 @@ func (t *task) getSizeAndName() {
 		panic("error while getting size")
 	}
 	req.Header.Add("Range", "bytes=0-0")
+	if t.useragent != "" {
+		req.Header.Add("User-Agent", t.useragent)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err)
 		panic("error while trying to get file size")
 	}
-	size, err := strconv.ParseInt(resp.Header.Get("x-bs-file-size"), 10, 64)
+	if resp.StatusCode != 206 {
+		panic("server does not support partial downloading")
+	}
+	reg := regexp.MustCompile("[\\S\\s]*/([\\S]*)")
+	t.size, err = strconv.ParseInt(reg.FindStringSubmatch(resp.Header.Get("Content-Range"))[1], 10, 64)
 	if err != nil {
 		log.Println(err)
 		panic("failed to transform result into int64")
 	}
-	reg := regexp.MustCompile("attachment;filename=\"(?P<filename>[\\S, ]*)\"")
-	filename := reg.FindStringSubmatch(resp.Header.Get("Content-Disposition"))[1]
+	filename := ""
+	reg = regexp.MustCompile("[\\S]*/([\\S][^/][^?]+)($|\\?[\\S]*)$")
+	regResult := reg.FindStringSubmatch(t.url)
+	if len(regResult) > 1 {
+		filename = regResult[1]
+	}
+	reg = regexp.MustCompile("attachment;filename=\"(?P<filename>[\\S, ]*)\"")
+	regResult = reg.FindStringSubmatch(resp.Header.Get("Content-Disposition"))
+	if len(regResult) > 1 {
+		filename = regResult[1]
+	}
 	if t.filename == "" {
 		t.filename = filename
 	}
-	t.size = size
 }

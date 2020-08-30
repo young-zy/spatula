@@ -1,7 +1,6 @@
 package downloader
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -10,10 +9,11 @@ func TestDownloader(t *testing.T) {
 }
 
 func TestDownload(t *testing.T) {
-
-}
-
-func TestResolve(t *testing.T) {
-	link := "https://pan.baidu.com/s/1mgpAh76"
-	fmt.Printf("%v", Resolve(link))
+	task := NewTask(
+		"https://oxygenos.oneplus.net/OnePlus6Oxygen_22_OTA_047_all_2007191515_bd6f7476887846cb.zip",
+		"",
+		"OnePlus6Oxygen_22_OTA_047_all_2007191515_bd6f7476887846cb.zip",
+		"",
+	)
+	task.Download(102400, 500)
 }
