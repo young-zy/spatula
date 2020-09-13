@@ -2,6 +2,8 @@ package downloader
 
 import (
 	"bufio"
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -46,7 +48,7 @@ func NewTask(url string, path string, filename string, userAgent string) *task {
 	}
 }
 
-func (t *task) Download(blockSize int64, maxGoroutines int) {
+func (t *task) Download(ctx context.Context, blockSize int64, maxGoroutines int) {
 	err := t.handle302()
 	if err != nil {
 		panic(err)
@@ -64,11 +66,11 @@ func (t *task) Download(blockSize int64, maxGoroutines int) {
 		<-wait
 		go func() {
 			count := 0
-			for count < 20 {
+			for count < 20 && !errors.Is(ctx.Err(), context.Canceled) {
 				if t.size-offset < blockSize {
 					blockSize = t.size - offset
 				}
-				err := t.downloadBlock(offset, blockSize)
+				err := t.downloadBlock(ctx, offset, blockSize)
 				if err != nil {
 					fmt.Println(err)
 					count++
@@ -84,27 +86,28 @@ func (t *task) Download(blockSize int64, maxGoroutines int) {
 		}()
 	}
 	wg.Wait()
-	err = os.Rename(t.path+t.tempFilename, t.path+t.filename)
-	if err != nil {
-		log.Println(err)
-		panic("failed to rename file after completion")
+	if !errors.Is(ctx.Err(), context.Canceled) {
+		err = os.Rename(t.path+t.tempFilename, t.path+t.filename)
+		if err != nil {
+			log.Println(err)
+			panic("failed to rename file after completion")
+		}
 	}
 }
 
-func (t *task) downloadBlock(offset int64, size int64) error {
-	req, err := http.NewRequest("GET", t.url, nil)
+func (t *task) downloadBlock(ctx context.Context, offset int64, size int64) error {
+	req, err := http.NewRequestWithContext(ctx, "GET", t.url, nil)
 	if err != nil {
 		return err
 	}
-	downloadRange := fmt.Sprintf("bytes=%v-%v", offset, offset+size)
+	downloadRange := fmt.Sprintf("bytes=%v-%v", offset, offset+size-1)
+	fmt.Println("starting: ", downloadRange)
 	req.Header.Add("Range", downloadRange)
 	if t.useragent != "" {
 		req.Header.Set("User-Agent", t.useragent)
 	}
 	for _, c := range t.cookies {
-		if c.Name == "BAIDUID" {
-			req.AddCookie(c)
-		}
+		req.AddCookie(c)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -117,11 +120,12 @@ func (t *task) downloadBlock(offset int64, size int64) error {
 	}
 	defer fp.Close()
 	_, err = fp.Seek(offset, 0)
-	_, err = reader.WriteTo(fp)
+	bytes, err := reader.WriteTo(fp)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("finished %v-%v\n", offset, offset+size)
+	fmt.Printf("finished %v-%v\n", offset, offset+size-1)
+	fmt.Println(bytes)
 	return nil
 }
 
@@ -131,7 +135,7 @@ func (t *task) handle302() error {
 			return http.ErrUseLastResponse
 		},
 	}
-	resp, err := client.Head(t.url)
+	resp, err := client.Get(t.url)
 	if err != nil || resp == nil {
 		return err
 	}
@@ -175,7 +179,7 @@ func (t *task) createTempFile() {
 }
 
 func (t *task) getSizeAndName() {
-	client := &http.Client{}
+	client := http.DefaultClient
 	req, err := http.NewRequest("GET", t.url, nil)
 	if err != nil {
 		panic("error while getting size")
@@ -190,7 +194,8 @@ func (t *task) getSizeAndName() {
 		panic("error while trying to get file size")
 	}
 	if resp.StatusCode != 206 {
-		panic("server does not support partial downloading")
+		log.Println("server does not support partial downloading")
+		panic(err)
 	}
 	reg := regexp.MustCompile("[\\S\\s]*/([\\S]*)")
 	t.size, err = strconv.ParseInt(reg.FindStringSubmatch(resp.Header.Get("Content-Range"))[1], 10, 64)
